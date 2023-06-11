@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 class LoginModel:
     def __init__(self):
         self.users = {
@@ -12,6 +13,7 @@ class LoginModel:
         if username in self.users and self.users[username] == password:
             return True
         return False
+
 
 class HistoricModel():
     historic = pd.DataFrame(({"admin": "admin",
