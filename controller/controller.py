@@ -1,5 +1,5 @@
 from model.database import *
-from view.view import LoginView
+from view.view import LoginView, App
 
 
 class LoginController:
