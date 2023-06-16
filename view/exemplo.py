@@ -71,7 +71,7 @@ class LoginView:
 
 class App(ctk.CTk):
     def __init__(self):
-        super().__init__()
+        super(App, self).__init__()
 
         # configure window
         self.title("Machine Learning")
@@ -137,3 +137,6 @@ class App(ctk.CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
+
+a = App()
+a.mainloop()
