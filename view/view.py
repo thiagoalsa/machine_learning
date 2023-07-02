@@ -4,7 +4,8 @@ from tkinter import *
 from tkinter import filedialog, messagebox, ttk
 from CTkMessagebox import CTkMessagebox
 from time import sleep
-from model.database import HistoricModel
+import model.database
+from model.database import *
 from model.brain import Brain
 import pandas as pd
 
@@ -46,16 +47,16 @@ class LoginView:
         self.login_button.pack(padx=10, pady=10)
 
     def show_successful(self):
+        self.root.destroy()
         self.app = App()
-        self.app.run()
-
+        self.app.root.mainloop()
 
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
         if not username or not password:
             self.empty_label = ctk.CTkLabel(self.root, text="ERROR! Please fill in all fields.",
-                                            text_color='yellow',
+                                            text_color='red',
                                             )
             self.empty_label.pack()
         else:
@@ -70,24 +71,23 @@ class LoginView:
         self.root.mainloop()
 
 
-class App(ctk.CTk):
+class App:
     def __init__(self):
-        super().__init__()
-
         # configure window
-        self.title("Machine Learning")
-        self.geometry(f"{1300}x{640}")
-        self.pack_propagate(False)
+        self.root = ctk.CTk()
+        self.root.title("Machine Learning")
+        self.root.geometry(f"{1300}x{640}")
+        #self.root.pack_propagate(False)
         ctk.set_appearance_mode('light')
         ctk.set_default_color_theme("green")
 
         # configure grid layout (4x4)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure((2, 3), weight=0)
-        self.grid_rowconfigure((0, 1, 2), weight=1)
+        self.root.grid_columnconfigure(1, weight=2)
+        self.root.grid_columnconfigure((2, 3), weight=0)
+        self.root.grid_rowconfigure((0, 1, 2), weight=1)
 
         # create sidebar frame with widgets
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=10)
+        self.sidebar_frame = ctk.CTkFrame(self.root, width=200, corner_radius=10)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(4, weight=1)
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="Machine Learning",
@@ -104,33 +104,77 @@ class App(ctk.CTk):
                                          command=self.open_file_view)
         self.file_button.grid(row=5, column=0, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
-        # create main entry and button
-        self.entry = ctk.CTkEntry(self, placeholder_text="search")
-        self.entry.grid(row=4, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
-
-        self.main_button_1 = ctk.CTkButton(master=self, border_width=2, text='Search',
-                                           text_color=("gray10", "#DCE4EE"))
-        self.main_button_1.grid(row=4, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
-
-        # create scrollable frame #1
-        self.scrollable_frame1 = ctk.CTkScrollableFrame(self, label_text='Historic MT5 - Machine Learning')
+        # create scrollable frame for position
+        self.scrollable_frame1 = ctk.CTkScrollableFrame(self.root, label_text='Open Positions MT5',
+                                                        label_font=('Arial', 25))
         self.scrollable_frame1.grid(row=1, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.historic_label1 = ctk.CTkLabel(self.scrollable_frame1, text='OI')
-        self.historic_label1.grid(row=0, column=0, padx=20, pady=(20, 10))
 
-        ###### label frame
-        self.label_frame = ctk.CTkScrollableFrame(self, label_text='Teste')
+        # create a Treeview for position
+        self.trv_position = tkk.Treeview(self.scrollable_frame1)
+        self.trv_position.pack(pady=10)
+
+        # create a get positions button
+        self.get = model.database.HistoricModel()
+        self.position_button = ctk.CTkButton(self.root, border_width=2, text='Get Positions', command=self.show_position)
+        self.position_button.grid(row=2, column=1)
+
+        # create scrollable frame for historic
+        self.label_frame = ctk.CTkScrollableFrame(self.root, label_text='Historic MT5',
+                                                  label_font=('Arial', 25))
         self.label_frame.grid(row=3, column=1, padx=(20, 0), pady=(20, 0), sticky='nsew')
 
-        self.trv = tkk.Treeview(self.label_frame)
-        self.trv.pack(pady=20)
+        # create a Treeview for historic
+        self.trv_historic = tkk.Treeview(self.label_frame)
+        self.trv_historic.pack(pady=20)
+
+        # create a get historic button
+        self.get = model.database.HistoricModel()
+        self.position_button = ctk.CTkButton(self.root, border_width=2, text='Get Historic',
+                                             command=self.show_historic)
+        self.position_button.grid(row=4, column=1, pady=20)
+
+    def show_position(self):
+        self.pos_data = model.database.HistoricModel()
+        self.pos_data = self.pos_data.get_position()
+        print(self.pos_data)
+        # clean treeview
+        self.trv_position.delete(*self.trv_position.get_children())
+
+        # create a headers
+        self.trv_position['column'] = list(self.pos_data.columns)
+        self.trv_position['show'] = 'headings'
+
+        # show headers
+        for col in self.trv_position['column']:
+            self.trv_position.heading(col, text=col)
+
+        # show all data
+        self.pos_rows = self.pos_data.to_numpy().tolist()
+        for row in self.pos_rows:
+            self.trv_position.insert('', 'end', values=row)
+
+    def show_historic(self):
+        self.pos_data = model.database.HistoricModel()
+        self.pos_data = self.pos_data.get_historic()
+        print(self.pos_data)
+        # clean treeview
+        self.trv_historic.delete(*self.trv_historic.get_children())
+
+        # create a headers
+        self.trv_historic['column'] = list(self.pos_data.columns)
+        self.trv_historic['show'] = 'headings'
+
+        # show headers
+        for col in self.trv_historic['column']:
+            self.trv_historic.heading(col, text=col)
+
+        # show all data
+        self.pos_rows = self.pos_data.to_numpy().tolist()
+        for row in self.pos_rows:
+            self.trv_historic.insert('', 'end', values=row)
 
     def open_file_view(self):
         self.load_file = Brain.open_file(self)
-
-
-    def run(self):
-        self.mainloop()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)

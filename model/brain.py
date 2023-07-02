@@ -90,16 +90,17 @@ class Brain():
         # grab the file
         try:
             #create a dataframe
-            self.historic_df = pd.read_excel(self.my_file)
+            self.file_name = self.my_file
+            self.historic_df = pd.read_excel(io=self.file_name)
             self.index_start = self.historic_df.loc[self.historic_df.values == 'Posições'].index.values
-            self.index_start = self.index_start[0] + 1
+            self.index_start = self.index_start[0]
             self.index_finish = self.historic_df.loc[self.historic_df.values == 'Ordens'].index.values
             self.index_finish = self.index_finish[0] - 1
             self.historic_df = self.historic_df.loc[self.index_start: self.index_finish]
             self.historic_df = self.historic_df.reset_index(drop=True)
-            self.historic_df.set_axis(self.historic_df.iloc[0], axis='columns', inplace=True)
-            self.historic_df = self.historic_df[1:]
-
+            self.historic_df.columns = self.historic_df.iloc[1]
+            self.historic_df = self.historic_df[2:]
+            print(self.historic_df)
 
         except Exception as e:
             messagebox.showerror('Error', f'There was a problem! {e}')
@@ -110,12 +111,14 @@ class Brain():
         self.my_tree.delete(*self.my_tree.get_children())
 
         # get the headers
-        self.my_tree['column'] =list(self.historic_df.columns)
+        self.my_tree['column'] = list(self.historic_df.columns)
         self.my_tree['show'] = 'headings'
 
         # show the headers
         for col in self.my_tree['column']:
             self.my_tree.heading(col, text=col)
+
+
 
 #a = Brain()
 #a.collect_historic()
