@@ -76,7 +76,7 @@ class App:
         # configure window
         self.root = ctk.CTk()
         self.root.title("Machine Learning")
-        self.root.geometry(f"{1300}x{640}")
+        self.root.geometry(f"{1200}x{740}")
         #self.root.pack_propagate(False)
         ctk.set_appearance_mode('light')
         ctk.set_default_color_theme("green")
@@ -99,15 +99,18 @@ class App:
                                                              values=["Light", "Dark"],
                                                              command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
+
         # create main entry and button
         self.file_button = ctk.CTkButton(self.sidebar_frame, border_width=2, text='Open File',
                                          command=self.open_file_view)
         self.file_button.grid(row=5, column=0, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
         # create scrollable frame for position
-        self.scrollable_frame1 = ctk.CTkScrollableFrame(self.root, label_text='Open Positions MT5',
-                                                        label_font=('Arial', 25))
-        self.scrollable_frame1.grid(row=1, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.scrollable_frame1 = ctk.CTkScrollableFrame(self.root,
+                                                        label_text='Open Positions MT5',
+                                                        label_font=('Arial', 25)
+                                                        )
+        self.scrollable_frame1.grid(row=1, column=1, padx=(5, 20), pady=(5, 20), sticky="nsew")
 
         # create a Treeview for position
         self.trv_position = tkk.Treeview(self.scrollable_frame1)
@@ -118,14 +121,26 @@ class App:
         self.position_button = ctk.CTkButton(self.root, border_width=2, text='Get Positions', command=self.show_position)
         self.position_button.grid(row=2, column=1)
 
-        # create scrollable frame for historic
-        self.label_frame = ctk.CTkScrollableFrame(self.root, label_text='Historic MT5',
-                                                  label_font=('Arial', 25))
-        self.label_frame.grid(row=3, column=1, padx=(20, 0), pady=(20, 0), sticky='nsew')
+        # create a frame for historic
+        self.frame2 = ctk.CTkFrame(self.root)
+        self.frame2.grid(row=3, column=1, padx=(20, 20), pady=(20, 20), sticky='nsew')
+        self.frame2_label = Label(self.frame2, text='Historic MT5', font=('Arial', 25))
+        self.frame2_label.pack()
 
         # create a Treeview for historic
-        self.trv_historic = tkk.Treeview(self.label_frame)
+        self.trv_historic = tkk.Treeview(self.frame2)
         self.trv_historic.pack(pady=20)
+
+        # create a scroll bar
+        self.scrollbar_x = Scrollbar(self.frame2, orient=HORIZONTAL)
+        self.scrollbar_y = Scrollbar(self.frame2, orient=VERTICAL)
+        self.scrollbar_x.place(relx=0.002, rely=0.925, width=1040, height=25)
+        self.scrollbar_y.place(relx=0.934, rely=0.128, width=22, height=423)
+        self.trv_historic.configure(xscrollcommand=self.scrollbar_x.set)
+        self.trv_historic.configure(yscrollcommand=self.scrollbar_y.set)
+        self.trv_historic.configure(selectmode='extended')
+        self.scrollbar_x.configure(command=self.trv_historic.xview)
+        self.scrollbar_y.configure(command=self.trv_historic.yview)
 
         # create a get historic button
         self.get = model.database.HistoricModel()
