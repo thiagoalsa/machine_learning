@@ -14,36 +14,29 @@ class LoginView:
     def __init__(self, controller):
         self.controller = controller
 
-        ctk.set_appearance_mode('light')
-        ctk.set_default_color_theme("green")
-
-        self.root = ctk.CTk()
+        self.root = Tk()
         self.root.title("Login")
 
         self.root.geometry('320x320')
 
         # Create a username Label
-        self.username_label = ctk.CTkLabel(self.root, text="Username:")
+        self.username_label = Label(self.root, text="Username:")
         self.username_label.pack()
 
         # Create a username input
-        self.username_entry = ctk.CTkEntry(self.root, placeholder_text='example@gmail.com')
+        self.username_entry = Entry(self.root)
         self.username_entry.pack(padx=10, pady=10)
 
         # Create a password label
-        self.password_label = ctk.CTkLabel(self.root, text="Password:")
+        self.password_label = Label(self.root, text="Password:")
         self.password_label.pack()
 
         # Create a password input
-        self.password_entry = ctk.CTkEntry(self.root, show="*", placeholder_text='your password')
+        self.password_entry = Entry(self.root, show="*")
         self.password_entry.pack(padx=10, pady=10)
 
-        # Create a checkbox
-        self.checkbox = ctk.CTkCheckBox(self.root, text='Remember Password')
-        self.checkbox.pack(padx=10, pady=10)
-
         # Create a Button
-        self.login_button = ctk.CTkButton(self.root, text="Login", command=self.login)
+        self.login_button = Button(self.root, text="Login", command=self.login)
         self.login_button.pack(padx=10, pady=10)
 
     def show_successful(self):
