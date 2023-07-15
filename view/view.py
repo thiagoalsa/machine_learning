@@ -1,3 +1,4 @@
+import customtkinter
 import customtkinter as ctk
 import tkinter.ttk as tkk
 from tkinter import *
@@ -8,16 +9,16 @@ import model.database
 from model.database import *
 from model.brain import Brain
 import pandas as pd
-
+from PIL import ImageTk, Image
 
 class LoginView:
     def __init__(self, controller):
         self.controller = controller
 
         self.root = Tk()
-        self.root.title("Login")
-
-        self.root.geometry('320x320')
+        self.root.title("Lysmata | Login")
+        self.root.geometry('300x210')
+        self.root.pack_propagate(False)
 
         # Create a username Label
         self.username_label = Label(self.root, text="Username:")
@@ -42,23 +43,18 @@ class LoginView:
     def show_successful(self):
         self.root.destroy()
         self.app = App()
-        self.app.root.mainloop()
 
     def login(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
         if not username or not password:
-            self.empty_label = ctk.CTkLabel(self.root, text="ERROR! Please fill in all fields.",
-                                            text_color='red',
-                                            )
-            self.empty_label.pack()
+            messagebox.showinfo('Login', 'Missing credentials. Please try again.')
         else:
             self.controller.login(username, password)
 
     def show_error(self):
         # Show some error message
-        CTkMessagebox(title="Error", message="Something went wrong!!! Check your username and your password",
-                      icon="cancel")
+        messagebox.showerror('Login', 'Incorrect credentials. Please try again.')
 
     def run(self):
         self.root.mainloop()
@@ -75,7 +71,7 @@ class App:
         ctk.set_default_color_theme("green")
 
         # configure grid layout (4x4)
-        self.root.grid_columnconfigure(1, weight=2)
+        self.root.grid_columnconfigure(1, weight=1)
         self.root.grid_columnconfigure((2, 3), weight=0)
         self.root.grid_rowconfigure((0, 1, 2), weight=1)
 
@@ -120,15 +116,15 @@ class App:
         self.frame2_label = Label(self.frame2, text='Historic MT5', font=('Arial', 25))
         self.frame2_label.pack()
 
+        # create a scroll bar for historic treeview
+        self.scrollbar_y = Scrollbar(self.frame2, orient=VERTICAL)
+        self.scrollbar_y.pack(side=RIGHT, fill=Y)
+        self.scrollbar_x = Scrollbar(self.frame2, orient=HORIZONTAL)
+        self.scrollbar_x.pack(side=BOTTOM, fill=X)
+
         # create a Treeview for historic
         self.trv_historic = tkk.Treeview(self.frame2)
         self.trv_historic.pack(pady=20)
-
-        # create a scroll bar
-        self.scrollbar_x = Scrollbar(self.frame2, orient=HORIZONTAL)
-        self.scrollbar_y = Scrollbar(self.frame2, orient=VERTICAL)
-        self.scrollbar_x.place(relx=0.002, rely=0.925, width=1040, height=25)
-        self.scrollbar_y.place(relx=0.934, rely=0.128, width=22, height=423)
         self.trv_historic.configure(xscrollcommand=self.scrollbar_x.set)
         self.trv_historic.configure(yscrollcommand=self.scrollbar_y.set)
         self.trv_historic.configure(selectmode='extended')
@@ -140,30 +136,33 @@ class App:
         self.position_button = ctk.CTkButton(self.root, border_width=2, text='Get Historic',
                                              command=self.show_historic)
         self.position_button.grid(row=4, column=1, pady=20)
+        self.root.mainloop()
 
     def show_position(self):
         self.pos_data = model.database.HistoricModel()
-        self.pos_data = self.pos_data.get_position()
-        print(self.pos_data)
-        # clean treeview
-        self.trv_position.delete(*self.trv_position.get_children())
+        self.pos_data = self.pos_data.get_position_customer()
+        if self.pos_data != None:
+            # clean treeview
+            self.trv_position.delete(*self.trv_position.get_children())
 
-        # create a headers
-        self.trv_position['column'] = list(self.pos_data.columns)
-        self.trv_position['show'] = 'headings'
+            # create a headers
+            self.trv_position['column'] = list(self.pos_data.columns)
+            self.trv_position['show'] = 'headings'
 
-        # show headers
-        for col in self.trv_position['column']:
-            self.trv_position.heading(col, text=col)
+            # show headers
+            for col in self.trv_position['column']:
+                self.trv_position.heading(col, text=col)
 
-        # show all data
-        self.pos_rows = self.pos_data.to_numpy().tolist()
-        for row in self.pos_rows:
-            self.trv_position.insert('', 'end', values=row)
+            # show all data
+            self.pos_rows = self.pos_data.to_numpy().tolist()
+            for row in self.pos_rows:
+                self.trv_position.insert('', 'end', values=row)
+        else:
+            pass
 
     def show_historic(self):
         self.pos_data = model.database.HistoricModel()
-        self.pos_data = self.pos_data.get_historic()
+        self.pos_data = self.pos_data.get_historic_customer()
         print(self.pos_data)
         # clean treeview
         self.trv_historic.delete(*self.trv_historic.get_children())

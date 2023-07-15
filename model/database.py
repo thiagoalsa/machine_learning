@@ -21,7 +21,7 @@ class LoginModel:
 
 
 class HistoricModel:
-    def get_position(self):
+    def get_position_customer(self):
         # Initialize MT5
         mt5.initialize()
 
@@ -41,9 +41,9 @@ class HistoricModel:
             print(self.positions_df)
             return self.positions_df
         else:
-            messagebox.showerror('Error! There is no open position')
+            messagebox.showerror('Error!', 'There is no open position')
 
-    def get_historic(self):
+    def get_historic_customer(self):
         # Initialize MT5
         mt5.initialize()
 

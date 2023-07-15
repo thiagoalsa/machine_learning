@@ -4,7 +4,7 @@ from tkinter import *
 from tkinter import filedialog, messagebox, ttk
 from CTkMessagebox import CTkMessagebox
 from time import sleep
-from model.database import HistoricModel
+#from model.database import HistoricModel
 #import mysql.connector
 
 
