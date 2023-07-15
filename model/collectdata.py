@@ -46,6 +46,7 @@ class DataView:
         # removendo as linhas com o profit baixo 'porque nao bateram no tp ou sl'
         df['profit'] = df_profit
         df = df.query('profit > 20 or profit < - 20')
+        df = df.reset_index(drop=True)
 
 
 

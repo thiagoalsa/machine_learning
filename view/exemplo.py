@@ -1,142 +1,211 @@
-import customtkinter as ctk
-import tkinter.ttk as tkk
-from tkinter import *
-from tkinter import filedialog, messagebox, ttk
-from CTkMessagebox import CTkMessagebox
-from time import sleep
-#from model.database import HistoricModel
-#import mysql.connector
+from datetime import datetime
+import pandas as pd
+import numpy as np
+import MetaTrader5 as mt5
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import ExtraTreesClassifier
 
 
-class LoginView:
-    def __init__(self, controller):
-        self.controller = controller
 
-        ctk.set_appearance_mode('light')
-        ctk.set_default_color_theme("green")
-
-        self.root = ctk.CTk()
-        self.root.title("Login")
-
-        self.root.geometry('320x320')
-
-        # Create a username Label
-        self.username_label = ctk.CTkLabel(self.root, text="Username:")
-        self.username_label.pack()
-
-        # Create a username input
-        self.username_entry = ctk.CTkEntry(self.root, placeholder_text='example@gmail.com')
-        self.username_entry.pack(padx=10, pady=10)
-
-        # Create a password label
-        self.password_label = ctk.CTkLabel(self.root, text="Password:")
-        self.password_label.pack()
-
-        # Create a password input
-        self.password_entry = ctk.CTkEntry(self.root, show="*", placeholder_text='your password')
-        self.password_entry.pack(padx=10, pady=10)
-
-        # Create a checkbox
-        self.checkbox = ctk.CTkCheckBox(self.root, text='Remember Password')
-        self.checkbox.pack(padx=10, pady=10)
-
-        # Create a Button
-        self.login_button = ctk.CTkButton(self.root, text="Login", command=self.login)
-        self.login_button.pack(padx=10, pady=10)
-
-    def show_successful(self):
-        self.app = App()
-        self.app.run()
-
-
-    def login(self):
-        username = self.username_entry.get()
-        password = self.password_entry.get()
-        if not username or not password:
-            self.empty_label = ctk.CTkLabel(self.root, text="ERROR! Please fill in all fields.",
-                                            text_color='yellow',
-                                            )
-            self.empty_label.pack()
-        else:
-            self.controller.login(username, password)
-
-    def show_error(self):
-        # Show some error message
-        CTkMessagebox(title="Error", message="Something went wrong!!! Check your username and your password",
-                      icon="cancel")
-
-    def run(self):
-        self.root.mainloop()
-
-
-class App(ctk.CTk):
+class AccuracyHistoric:
     def __init__(self):
-        super(App, self).__init__()
+        mt5.initialize()
 
-        # configure window
-        self.title("Machine Learning")
-        self.geometry(f"{320}x{420}")
-        self.pack_propagate(False)
+        self.from_date = datetime(2022, 1, 1)
+        self.to_date = datetime.now()
+
+        self.orders = mt5.history_orders_get(self.from_date, self.to_date)
+        self.deals = mt5.history_deals_get(self.from_date, self.to_date)
+
+        self.df = pd.DataFrame(list(self.orders), columns=self.orders[0]._asdict().keys())
+        self.df_profit = pd.DataFrame(list(self.deals), columns=self.deals[0]._asdict().keys())
+
+        # transformando a coluna time_setup em um valor datetime
+        self.df['time_setup'] = pd.to_datetime(self.df['time_setup'], unit='s')
+        self.df['time_setup'] = self.df['time_setup'].dt.time
+
+        # removendo os dois pontos -> : dos valores datetime da coluna time_setup
+        self.coluna_nova = []
+        for item in self.df['time_setup']:
+            item_formatado = item.strftime('%H%M%S')
+            self.coluna_nova.append(item_formatado)
+
+        self.df['time_setup'] = self.coluna_nova
+
+        # selecionando apenas as colunas necessarias para o machine learning
+        self.colunas_selecionadas = ['time_setup', 'type', 'price_open', 'sl', 'tp']
+        self.df = self.df.filter(items=self.colunas_selecionadas)
+
+        # removendo as linhas que nao possuem sl
+        self.df = self.df.query('sl != 0')
+        self.df = self.df.reset_index(drop=True)
+
+        # removendo as linhas que nao possuem tp
+        self.df = self.df.query('tp != 0')
+        self.df = self.df.reset_index(drop=True)
+
+        # removendo as linhas que o valor de profit seja igual a 0
+        self.df_profit = self.df_profit.filter(items=['profit'])
+        self.df_profit = self.df_profit[1:]
+        self.df_profit = self.df_profit.query('profit != 0')
+        self.df_profit = self.df_profit.reset_index(drop=True)
+        self.df['profit'] = self.df_profit
+        # alterando os valores de profit positivo para 1 e valores negativos para 0
+        self.df['profit'] = np.where(self.df['profit'] > 0, 1, 0)
+        self.df = self.df.reset_index(drop=True)
+
+        if len(self.df) > 2:
+            # criar as colunas da ultima entrada
+            last_entry_time = self.df['time_setup'][:-1]
+            last_entry_type = self.df['type'][:-1]
+            last_entry_price = self.df['price_open'][:-1]
+            last_entry_sl = self.df['sl'][:-1]
+            last_entry_tp = self.df['tp'][:-1]
+            last_entry_profit = self.df['profit'][:-1]
+        else:
+            print('dados insuficiente.')
+
+        if len(self.df) > 3:
+            # criar as colunas da penultima entrada
+            second_last_entry_time = self.df['time_setup'][:-2]
+            second_last_entry_type = self.df['type'][:-2]
+            second_last_entry_price = self.df['price_open'][:-2]
+            second_last_entry_sl = self.df['sl'][:-2]
+            second_last_entry_tp = self.df['tp'][:-2]
+            second_last_entry_profit = self.df['profit'][:-2]
+        else:
+            pass
+
+        if len(self.df) > 4:
+            # criar as colunas da ante-penultima entrada
+            third_last_entry_time = self.df['time_setup'][:-3]
+            third_last_entry_type = self.df['type'][:-3]
+            third_last_entry_price = self.df['price_open'][:-3]
+            third_last_entry_sl = self.df['sl'][:-3]
+            third_last_entry_tp = self.df['tp'][:-3]
+            third_last_entry_profit = self.df['profit'][:-3]
+        else:
+            pass
+
+        if len(self.df) > 2:
+            # removendo a primeira linha porque ela nao tem entrada anterior por ser a primeira
+            self.df = self.df[1:]
+            self.df = self.df.reset_index(drop=True)
+
+            # adicionando as colunas da ultima entrada ao dataframe
+            self.df['last_entry_time'] = last_entry_time
+            self.df['last_entry_type'] = last_entry_type
+            self.df['last_entry_price'] = last_entry_price
+            self.df['last_entry_sl'] = last_entry_sl
+            self.df['last_entry_tp'] = last_entry_tp
+            self.df['last_entry_profit'] = last_entry_profit
+            print(self.df.shape[1])
+        else:
+            pass
+
+        if len(self.df) > 3:
+            # removendo a primeira linha novamente porque ela nao tem duas entrada anterior por ser a primeira
+            self.df = self.df[1:]
+            self.df = self.df.reset_index(drop=True)
+
+            # adicionando as colunas da penultima entrada ao dataframe
+            self.df['second_last_entry_time'] = second_last_entry_time
+            self.df['second_last_entry_type'] = second_last_entry_type
+            self.df['second_last_entry_price'] = second_last_entry_price
+            self.df['second_last_entry_sl'] = second_last_entry_sl
+            self.df['second_last_entry_tp'] = second_last_entry_tp
+            self.df['second_last_entry_profit'] = second_last_entry_profit
+            print(self.df.shape[1])
+        else:
+            pass
+
+        if len(self.df) > 4:
+            # removendo a primeira linha novamente porque ela nao tem entrada anterior por ser a primeira
+            self.df = self.df[1:]
+            self.df = self.df.reset_index(drop=True)
+
+            # adicionando as colunas da penultima entrada ao dataframe
+            self.df['third_last_entry_time'] = third_last_entry_time
+            self.df['third_last_entry_type'] = third_last_entry_type
+            self.df['third_last_entry_price'] = third_last_entry_price
+            self.df['third_last_entry_sl'] = third_last_entry_sl
+            self.df['third_last_entry_tp'] = third_last_entry_tp
+            self.df['third_last_entry_profit'] = third_last_entry_profit
+            print(self.df.shape[1])
+        else:
+            pass
+
+        # iniciando o ML
+        self.y = self.df['profit']
+        self.x = self.df.drop('profit', axis=1)
+
+        x_treino, x_teste, y_treino, y_teste = train_test_split(self.x, self.y, test_size=0.3)
+
+        self.modelo = ExtraTreesClassifier()
+        self.modelo.fit(x_treino, y_treino)
+
+        resultado = self.modelo.score(x_teste, y_teste)
+        print(f'Accuracy: {resultado * 100:.2f}%')
 
 
-        ctk.set_appearance_mode('light')
-        ctk.set_default_color_theme("green")
+    def predict_position(self):
+        positions = mt5.positions_get()
+        if len(positions) > 0:
+            self.df_positions = pd.DataFrame(list(positions), columns=positions[0]._asdict().keys())
+            # transformando valores de time em um valor dataframe
+            self.df_positions['time'] = pd.to_datetime(self.df_positions['time'], unit='s')
+            self.df_positions['time'] = self.df_positions['time'].dt.time
 
-        # configure grid layout (4x4)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_columnconfigure((2, 3), weight=0)
-        self.grid_rowconfigure((0, 1, 2), weight=1)
+            # retirando os : dos valores para virar um valor inteiro
+            self.df_positions['time'] = self.df_positions['time'].item().strftime('%H%M%S')
 
-        # create sidebar frame with widgets
-        self.sidebar_frame = ctk.CTkFrame(self, width=200, corner_radius=10)
-        self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
-        self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="Machine Learning",
-                                                 font=ctk.CTkFont(size=20, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        self.appearance_mode_label = ctk.CTkLabel(self.sidebar_frame, text="Appearance Mode:", anchor="w")
-        self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
-        self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.sidebar_frame,
-                                                                       values=["Light", "Dark"],
-                                                                       command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
-        self.checkbox_1 = ctk.CTkCheckBox(master=self.sidebar_frame, text='Machine Learning')
-        self.checkbox_1.grid(row=1, column=0, pady=(20, 0), padx=20, sticky="nsew")
+            # mudando o nome da coluna time para time_setup
+            self.df_positions = self.df_positions.rename(columns={'time': 'time_setup'})
 
-        # create main entry and button
-        self.entry = ctk.CTkEntry(self, placeholder_text="search")
-        self.entry.grid(row=4, column=1, columnspan=2, padx=(20, 0), pady=(20, 20), sticky="nsew")
+            # selecionando apenas as colunas necessarias para o machine learning
+            colunas_selecionadas2 = ['time_setup', 'type', 'price_open', 'sl', 'tp']
+            self.df_positions = self.df_positions.filter(items=colunas_selecionadas2)
 
-        self.main_button_1 = ctk.CTkButton(master=self, border_width=2, text='Search',
-                                                     text_color=("gray10", "#DCE4EE"))
-        self.main_button_1.grid(row=4, column=3, padx=(20, 20), pady=(20, 20), sticky="nsew")
+            self.historic_df = self.collect_historic_df()
 
-        # create scrollable frame #1
-        self.scrollable_frame1 = ctk.CTkScrollableFrame(self, label_text='Historic MT5 - Machine Learning')
-        self.scrollable_frame1.grid(row=1, column=1, padx=(20, 0), pady=(20, 0), sticky="nsew")
-        self.historic_label1 = ctk.CTkLabel(self.scrollable_frame1, text='OI')
-        self.historic_label1.grid(row=0, column=0, padx=20, pady=(20, 10))
-
-        ###### label frame
-        self.label_frame = ctk.CTkScrollableFrame(self, label_text='Teste')
-        self.label_frame.grid(row=3, column=1, padx=(20, 0), pady=(20, 0), sticky='nsew')
-
-        self.trv = tkk.Treeview(self.label_frame, columns=(1, 2, 3, 4, 5, 6), show='headings', height='100')
-        self.trv.pack()
-        self.trv.heading(1, text='time')
-        self.trv.heading(2, text='time_msc')
-        self.trv.heading(3, text='type')
-        self.trv.heading(4, text='entry')
-        self.trv.heading(5, text='price')
-        self.trv.heading(6, text='profit')
-        self.query = 'time, time_msc, type, entry, price, profit'
+            if self.historic_df.shape[1] == 12:
+                # adicionado as novas colunas ao dataframe das posicoes
+                self.df_positions['last_entry_time'] = self.historic_df['time_setup'].iloc[[-1]].item()
+                self.df_positions['last_entry_type'] = self.historic_df['type'].iloc[[-1]].item()
+                self.df_positions['last_entry_price'] = self.historic_df['price_open'].iloc[[-1]].item()
+                self.df_positions['last_entry_sl'] = self.historic_df['sl'].iloc[[-1]].item()
+                self.df_positions['last_entry_tp'] = self.historic_df['tp'].iloc[[-1]].item()
+                self.df_positions['last_entry_profit'] = self.historic_df['profit'].iloc[[-1]].item()
 
 
-    def run(self):
-        self.mainloop()
+            elif self.historic_df.shape[1] > 12:
+                self.df_positions['last_entry_time'] = self.historic_df['time_setup'].iloc[[-2]].item()
+                self.df_positions['last_entry_type'] = self.historic_df['type'].iloc[[-2]].item()
+                self.df_positions['last_entry_price'] = self.historic_df['price_open'].iloc[[-2]].item()
+                self.df_positions['last_entry_sl'] = self.historic_df['sl'].iloc[[-2]].item()
+                self.df_positions['last_entry_tp'] = self.historic_df['tp'].iloc[[-2]].item()
+                self.df_positions['last_entry_profit'] = self.historic_df['profit'].iloc[[-2]].item()
 
-    def change_appearance_mode_event(self, new_appearance_mode: str):
-        ctk.set_appearance_mode(new_appearance_mode)
+            elif self.historic_df.shape[1] > 18:
+                self.df_positions['last_entry_time'] = self.historic_df['time_setup'].iloc[[-3]].item()
+                self.df_positions['last_entry_type'] = self.historic_df['type'].iloc[[-3]].item()
+                self.df_positions['last_entry_price'] = self.historic_df['price_open'].iloc[[-3]].item()
+                self.df_positions['last_entry_sl'] = self.historic_df['sl'].iloc[[-3]].item()
+                self.df_positions['last_entry_tp'] = self.historic_df['tp'].iloc[[-3]].item()
+                self.df_positions['last_entry_profit'] = self.historic_df['profit'].iloc[[-3]].item()
 
-a = App()
-a.mainloop()
+            self.model = self.collect_modelo()
+            self.prevision = self.model(self.df_positions)
+            if self.prevision == 0:
+                print('LOSS')
+            else:
+                print('GAIN')
+
+    def collect_historic_df(self):
+        return self.df
+
+    def collect_modelo(self):
+        return self.modelo
+
+a = AccuracyHistoric()
+a.predict_position()
