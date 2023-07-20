@@ -25,6 +25,7 @@ class DataView:
 
         # transformando as colunas time_setup em um valor datetime
         df['time_setup'] = pd.to_datetime(df['time_setup'], unit='s')
+        df_profit['time'] = pd.to_datetime(df_profit['time'], unit='s')
         df['time_setup_msc'] = pd.to_datetime(df['time_setup_msc'], unit='ms')
         df['time_done'] = pd.to_datetime(df['time_done'], unit='s')
         df['time_done_msc'] = pd.to_datetime(df['time_done_msc'], unit='ms')
@@ -47,10 +48,16 @@ class DataView:
         df['profit'] = df_profit
         df = df.query('profit > 20 or profit < - 20')
         df = df.reset_index(drop=True)
-
-
-
         print(df)
+
+        orders = mt5.orders_get(group="GBP")
+        if orders is None:
+            print("No orders on GBPUSD, error code={}".format(mt5.last_error()))
+        else:
+            print("Total orders on GBPUSD:", len(orders))
+            # display all active orders
+            for order in orders:
+                print(order)
 
 #df.to_csv('MLMT5.csv', index=True)
 

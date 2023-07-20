@@ -207,5 +207,4 @@ class AccuracyHistoric:
     def collect_modelo(self):
         return self.modelo
 
-a = AccuracyHistoric()
-a.predict_position()
+

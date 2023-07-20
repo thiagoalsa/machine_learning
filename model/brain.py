@@ -117,9 +117,3 @@ class Brain():
         # show the headers
         for col in self.my_tree['column']:
             self.my_tree.heading(col, text=col)
-
-
-
-#a = Brain()
-#a.collect_historic()
-
