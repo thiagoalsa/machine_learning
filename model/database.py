@@ -38,7 +38,6 @@ class HistoricModel:
             self.positions_df['time'] = pd.to_datetime(self.positions_df['time'], unit='s')
             self.positions_df['time'] = self.positions_df['time'].dt.time
             self.positions_df['time'] = self.positions_df['time'].item().strftime('%H%M%S')
-            print(self.positions_df)
             return self.positions_df
         else:
             messagebox.showerror('Error!', 'There is no open position')

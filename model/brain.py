@@ -49,7 +49,13 @@ class Brain():
             print(result)
             print('-' * 50)
 
-    def collect_historic(self):
+    def collect_historic(self, date_start_y=2000,
+                         date_start_m=1,
+                         date_start_d=1,
+                         date_finish_y=None,
+                         date_finish_m=None,
+                         date_finish_d=None):
+
         # start MT5
         self.mt5 = mt5.initialize()
 

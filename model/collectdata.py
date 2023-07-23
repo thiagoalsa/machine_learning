@@ -1,64 +1,123 @@
-import MetaTrader5 as mt5
 import pandas as pd
 import numpy as np
-from datetime import datetime
-from datetime import datetime
 
 
-pd.set_option('display.max_columns', 500)  # número de colunas mostradas
-pd.set_option('display.width', 1500)  # max. largura máxima da tabela exibida
+pd.reset_option('display.max_rows', 1000)
+pd.reset_option('display.max_columns', 1000)
 
 class DataView:
-    def __init__(self):
+    def clean_customer(self, historic_df):
+        # create 2 string one in english and other in portuguese for know if data is portuguese or english
+        english = 'Trade History Report'  # name of first column
+        portuguese = 'Relatório do Histórico de Negociação'  # name of first column
 
-        mt5.initialize()
+        # collect name of first column
+        customer = historic_df.keys()
+        customer = customer[0]
 
-        # obtemos o número de transações no histórico
-        from_date = datetime(2022, 1, 1)
-        to_date = datetime.now()
+        # if the first column same portuguese DataFrame is in Portuguese
+        if customer == portuguese:
+            # collect the number of row index == 'Ordens' beacause there finish customer dataframe.
+            pt_index = historic_df.loc[historic_df['Relatório do Histórico de Negociação'] == 'Ordens'].index[0]
 
-        orders = mt5.history_orders_get(from_date, to_date)
-        deals = mt5.history_deals_get(from_date, to_date)
+            # create a historic data frame
+            historic_orders = historic_df.loc[5:pt_index - 1]
+            historic_orders = historic_orders.reset_index(drop=True)
+            historic_orders = historic_orders.rename(columns=historic_orders.iloc[0]).loc[1:]
+            historic_orders = historic_orders.dropna(axis=1, how='all')
 
-        df = pd.DataFrame(list(orders), columns=orders[0]._asdict().keys())
-        df_profit = pd.DataFrame(list(deals), columns=deals[0]._asdict().keys())
+            # Get a dictionary to store the new column names
+            new_names = []
+            names_list = ['Entrada', 'Entrada', 'Saida', 'Saida']
+            count = 0
+            # Iterate over the columns and rename the duplicates
+            for col in historic_orders.columns:
+                if col == 'Preço':
+                    new_names.append(f'Preço {names_list[count]}')
+                    count += 1
+                    continue
+                if col == 'Horário':
+                    new_names.append(f'Horário {names_list[count]}')
+                    count += 1
+                    continue
+                new_names.append(col)
+            historic_orders.columns = new_names
+            return historic_orders
 
-        # transformando as colunas time_setup em um valor datetime
-        df['time_setup'] = pd.to_datetime(df['time_setup'], unit='s')
-        df_profit['time'] = pd.to_datetime(df_profit['time'], unit='s')
-        df['time_setup_msc'] = pd.to_datetime(df['time_setup_msc'], unit='ms')
-        df['time_done'] = pd.to_datetime(df['time_done'], unit='s')
-        df['time_done_msc'] = pd.to_datetime(df['time_done_msc'], unit='ms')
+        if customer == english:
+            # collect the number of index the row 'Orders'
+            en_index = historic_df.loc[historic_df['Trade History Report'] == 'Orders'].index[0]
 
-        # alterando os valores de profit positivo para 1 e valores negativos para 0
-        df['type'] = np.where(df['type'] > 0, 'sell', 'buy')
-        df = df.reset_index(drop=True)
+            # create a historic data frame
+            historic_orders = historic_df.loc[5:en_index - 1]
+            historic_orders = historic_orders.reset_index(drop=True)
+            historic_orders = historic_orders.rename(columns=historic_orders.iloc[0]).loc[1:]
+            historic_orders = historic_orders.dropna(axis=1, how='all')
+            # Get a dictionary to store the new column names
+            new_names = []
+            names_list = ['Entry', 'Entry', 'Close', 'Close']
+            count = 0
+            # Iterate over the columns and rename the duplicates
+            for col in historic_orders.columns:
+                if col == 'Price':
+                    new_names.append(f'Price {names_list[count]}')
+                    count += 1
+                    continue
+                if col == 'Time':
+                    new_names.append(f'Time {names_list[count]}')
+                    count += 1
+                    continue
+                new_names.append(col)
+            historic_orders.columns = new_names
+            return historic_orders
 
-        # removendo as linhas que nao possuem sl
-        df = df.query('sl != 0')
-        df = df.reset_index(drop=True)
 
-        # removendo as linhas que o valor de profit seja igual a 0
-        df_profit = df_profit.filter(items=['profit'])
-        df_profit = df_profit[1:]
-        df_profit = df_profit.query('profit != 0')
-        df_profit = df_profit.reset_index(drop=True)
+    def clean_graph_deals(self, historic_df):
+        # create 2 string one in english and other in portuguese for know if data is portuguese or english
+        english = 'Trade History Report'  # name of first column
+        portuguese = 'Relatório do Histórico de Negociação'  # name of first column
 
-        # removendo as linhas com o profit baixo 'porque nao bateram no tp ou sl'
-        df['profit'] = df_profit
-        df = df.query('profit > 20 or profit < - 20')
-        df = df.reset_index(drop=True)
-        print(df)
+        # collect name of first column
+        customer = historic_df.keys()
+        customer = customer[0]
 
-        orders = mt5.orders_get(group="GBP")
-        if orders is None:
-            print("No orders on GBPUSD, error code={}".format(mt5.last_error()))
-        else:
-            print("Total orders on GBPUSD:", len(orders))
-            # display all active orders
-            for order in orders:
-                print(order)
+        # if the first column same portuguese DataFrame is in Portuguese
+        if customer == portuguese:
+            # collect the number of row index == 'Transações' beacause there start and finish dataframe.
+            pt_index_start = historic_df.loc[historic_df['Relatório do Histórico de Negociação'] == 'Transações'].index[0]
+            pt_index_finish = historic_df.loc[historic_df['Relatório do Histórico de Negociação'] == 'Saldo:'].index[0]
 
-#df.to_csv('MLMT5.csv', index=True)
+            # use the first row for headings(name of columns)
+            df = historic_df[pt_index_start + 1:pt_index_finish]
+            df = df.reset_index(drop=True)
+            df = df.rename(columns=df.iloc[0]).loc[1:]
 
-a = DataView()
+            # remove row the Lucro == 0
+            df = df.query('Lucro != 0')
+            df = df.reset_index(drop=True)
+
+            df = df['Saldo']
+            return df
+
+        if customer == english:
+            # collect the number of row index == 'Transations' beacause there start dataframe.
+            en_index_start = historic_df.loc[historic_df['Trade History Report'] == 'Deals'].index[0]
+            en_index_finish = historic_df.loc[historic_df['Trade History Report'] == 'Balance:'].index[0]
+            df = historic_df[en_index_start + 1:en_index_finish]
+            df = df.reset_index(drop=True)
+            df = df.rename(columns=df.iloc[0]).loc[1:]
+
+            return df
+
+'''
+df = pd.read_excel("C:/Users/Thiago/Desktop/ReportHistory-em portugues.xlsx")
+a = DataView().bar_graph(df)
+
+
+plt.plot(a)
+plt.axhline(y=a[0], color='red', linestyle='--', label='Abaixo negativo')
+plt.ylabel('Saldo MT5')
+plt.title('Historico de ganhos')
+plt.legend()
+plt.show()
+'''
