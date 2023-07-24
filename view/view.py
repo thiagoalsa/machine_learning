@@ -1,10 +1,9 @@
-import CTkMessagebox
+from CTkMessagebox import CTkMessagebox
 import customtkinter as ctk
 import tkinter.ttk as tkk
 from tkinter import *
-from tkinter import ttk
-import model.database
-from model.database import *
+from tkinter import ttk, messagebox
+from model import database
 from model.brain import Brain
 #from exemplo import AccuracyHistoric
 
@@ -53,7 +52,7 @@ class LoginView:
         username = self.username_entry.get()
         password = self.password_entry.get()
         if not username or not password:
-            messagebox.showinfo('Login', 'Missing credentials. Please try again.')
+            messagebox.showwarning('Login', 'Missing credentials. Please try again.')
         else:
             self.controller.login(username, password)
 
@@ -93,7 +92,7 @@ class App:
 
     # create a get positions button
         self.position_button = ctk.CTkButton(self.position_frame, border_width=2,
-                                             text='Get Positions',
+                                             text='Get Positions', command=self.show_position
                                              )
         self.position_button.pack(pady=10, padx=10)
 
@@ -103,6 +102,7 @@ class App:
         self.historic_frame = ctk.CTkFrame(self.root, height=150, width=400, corner_radius=30)
         self.historic_frame.pack()
         self.position_button = ctk.CTkButton(self.historic_frame, border_width=2, text='Get Historic',
+                                             command=self.show_historic_accurancy
                                              )
         self.position_button.pack(pady=10, padx=10)
 
@@ -110,14 +110,20 @@ class App:
         self.appearance_mode_label = ctk.CTkLabel(self.root, text="Appearance Mode:", anchor="w")
         self.appearance_mode_label.pack(pady=(10, 1))
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.root,
-                                                             values=["Light", "Dark"],
+                                                             values=["Dark", "Light"],
                                                              command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.pack(pady=(1, 30))
 
         self.root.mainloop()
 
 
+    def show_position(self):
+        positions = database.HistoricModel()
+        print(positions.get_position_customer())
 
+    def show_historic_accurancy(self):
+        pass
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         ctk.set_appearance_mode(new_appearance_mode)
+
